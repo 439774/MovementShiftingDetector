@@ -1,0 +1,112 @@
+local Archive = {}
+
+local function GetAbsoluteVector3(Vec3)
+	return Vector3.new(math.abs(Vec3.X), math.abs(Vec3.Y), math.abs(Vec3.Z))
+end
+
+local function DetectStrafeType(Velocity)
+	local function VelocityChangedWithinTimeWindow(Velocity)
+		local function ReturnTimeLeft(Velocity)
+			if not Archive.Vector_1 
+				and not Archive.Vector_2
+			then
+				if Archive.CurrentValue == 1 then
+					Archive.Vector_1 = Velocity.X
+				elseif Archive.CurrentValue == 2 then
+					Archive.Vector_2 = Velocity.X
+				else
+					Archive.Vector_1 = 0
+					Archive.Vector_2 = 0
+				end
+			else
+				if Archive.CurrentValue == 1 then
+					Archive.Vector_1 = Velocity.X
+				elseif Archive.CurrentValue == 2 then
+					Archive.Vector_2 = Velocity.X
+				else
+					Archive.Vector_1 = 0
+					Archive.Vector_2 = 0
+				end
+			end
+			
+			if not Archive.Vector_1 then
+				Archive.Vector_1 = 0
+			end
+			
+			if not Archive.Vector_2 then
+				Archive.Vector_2 = 0
+			end
+
+			if Archive.Time ~= 1 then
+				Archive.TimeLeft = true
+			else
+				Archive.TimeLeft = false
+			end
+
+			return Archive.TimeLeft
+		end
+
+		if ReturnTimeLeft(Velocity) then
+			if Archive.Vector_1 > 0 and Archive.Vector_2 < 0 
+				or Archive.Vector_1 < 0 and Archive.Vector_2 > 0
+			then
+				return true
+			else
+				return false
+			end
+		end
+	end
+
+	return VelocityChangedWithinTimeWindow(Velocity)
+end
+
+game:GetService("RunService").Heartbeat:Connect(function(DeltaTime)
+	local LocalPlayer = game.Players.LocalPlayer
+
+	if not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+
+	local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	Archive.Velocity = HumanoidRootPart.AssemblyLinearVelocity
+
+	local Humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+	Archive.Humanoid = Humanoid
+end)
+
+while task.wait(0.1) do
+	if not Archive.CurrentValue then
+		Archive.CurrentValue = 1
+	end
+
+	if Archive.CurrentValue == 1
+		and not Archive.MovingValues
+	then
+		Archive.MovingValues = true
+		Archive.CurrentValue = 2 
+	elseif Archive.CurrentValue == 2
+		and Archive.MovingValues
+	then
+		Archive.CurrentValue = 1
+		Archive.MovingValues = false
+	end
+	
+
+	local function Run(Velocity)
+		if not Archive.Time 
+			or Archive.Time == 1.1
+		then
+			Archive.Time = 0
+		else 
+			Archive.Time += 0.1
+		end
+		
+		if DetectStrafeType(Velocity) then
+			print("shifted")
+		end
+	end
+	
+	if Archive.Velocity then
+		Run(Archive.Velocity)
+	end
+end
